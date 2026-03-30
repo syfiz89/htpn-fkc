@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="theme-color" content="#fff0f5"/>
+<title>FKC Monitor — Fetal Kick Counter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --pink:       #c94f7a;
+    --pink-light: #fff0f5;
+    --pink-mid:   #f4b8cf;
+    --pink-soft:  #fce8f1;
+    --teal:       #0f8c62;
+    --teal-light: #e3f9f1;
+    --teal-mid:   #6fcfac;
+    --red:        #c83232;
+    --red-light:  #fff0f0;
+    --red-mid:    #f49898;
+    --amber:      #a8620a;
+    --amber-light:#fff7e6;
+    --amber-mid:  #f5c46a;
+    --gray:       #7a7872;
+    --gray-light: #f5f4f0;
+    --dark:       #1e1d1b;
+    --text:       #2a2926;
+    --text2:      #6b6964;
+    --text3:      #a09d98;
+    --bg:         #ffffff;
+    --bg2:        #faf9f7;
+    --border:     rgba(0,0,0,0.09);
+    --radius:     14px;
+    --radius-sm:  9px;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-size: 16px;
+    background: var(--bg);
+    color: var(--text);
+    overscroll-behavior: none;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; color: var(--dark); }
+  .topbar-sub   { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .topbar-badge {
+    font-size: 11px; font-weight: 500; padding: 4px 10px;
+    border-radius: 20px; background: var(--pink-light); color: var(--pink);
+    border: 1px solid var(--pink-mid);
+  }
+
+  /* ── Nav ── */
+  .nav {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 61px;
+    z-index: 29;
+  }
+  .nav-tab {
+    flex: 1; padding: 12px 6px; font-size: 12px; font-weight: 500;
+    border: none; background: none; cursor: pointer; color: var(--text2);
+    border-bottom: 2px solid transparent; transition: color .2s, border-color .2s;
+  }
+  .nav-tab.on { color: var(--pink); border-bottom-color: var(--pink); }
+
+  /* ── Panes ── */
+  .pane { display: none; padding: 18px 16px 60px; }
+  .pane.on { display: block; }
+
+  /* ── Banners ── */
+  .banner {
+    border-radius: var(--radius);
+    padding: 15px 16px;
+    margin-bottom: 16px;
+    border: 1px solid;
+  }
+  .banner-blue   { background: #edf5ff; border-color: #b8d4f8; }
+  .banner-ok     { background: var(--teal-light); border-color: var(--teal-mid); }
+  .banner-warn   { background: var(--amber-light); border-color: var(--amber-mid); }
+  .banner-danger { background: var(--red-light); border-color: var(--red-mid); }
+
+  .banner-icon  { font-size: 20px; margin-bottom: 5px; }
+  .banner-title { font-size: 14px; font-weight: 600; line-height: 1.4; }
+  .banner-sub   { font-size: 12px; margin-top: 4px; line-height: 1.6; }
+  .banner-bm    { font-size: 12px; margin-top: 2px; line-height: 1.6; font-style: italic; }
+
+  .banner-blue   .banner-title, .banner-blue   .banner-sub, .banner-blue   .banner-bm { color: #0b4f9e; }
+  .banner-ok     .banner-title, .banner-ok     .banner-sub, .banner-ok     .banner-bm { color: #065c40; }
+  .banner-warn   .banner-title, .banner-warn   .banner-sub, .banner-warn   .banner-bm { color: #6b3c06; }
+  .banner-danger .banner-title, .banner-danger .banner-sub, .banner-danger .banner-bm { color: #8b1c1c; }
+
+  /* ── Session clock bar ── */
+  .session-bar {
+    background: var(--bg2);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid var(--border);
+  }
+  .session-name { font-size: 14px; font-weight: 600; color: var(--dark); }
+  .session-detail { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .session-time {
+    font-size: 18px; font-weight: 300; color: var(--pink);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Timeline checkpoints ── */
+  .cp-wrap {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .cp-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .cp-header-label { font-size: 12px; font-weight: 600; color: var(--text); }
+  .cp-next { font-size: 11px; color: var(--text3); }
+  .cp-body { padding: 14px 16px; }
+  .timeline {
+    display: flex;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .tl-node { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    border: 2px solid; position: relative; z-index: 1;
+    transition: all .3s;
+  }
+  .tl-dot.done    { background: var(--teal-light); border-color: var(--teal);  color: #065c40; }
+  .tl-dot.active  { background: var(--pink-light); border-color: var(--pink);  color: var(--pink); }
+  .tl-dot.pending { background: var(--gray-light); border-color: #c8c6c0;      color: var(--text3); }
+  .tl-dot.alert   { background: var(--red-light);  border-color: var(--red);   color: var(--red);  animation: pulse-dot 1.2s infinite; }
+  @keyframes pulse-dot { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+  .tl-label { font-size: 10px; color: var(--text3); margin-top: 4px; }
+  .tl-line  { flex: 1; height: 2px; background: var(--border); margin-bottom: 14px; transition: background .3s; }
+  .tl-line.done { background: var(--teal-mid); }
+
+  /* Progress */
+  .prog-wrap { background: var(--gray-light); border-radius: 8px; height: 8px; overflow: hidden; }
+  .prog-fill  { height: 100%; border-radius: 8px; transition: width .5s ease, background .3s; }
+  .prog-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 5px; }
+
+  /* ── Big kick button ── */
+  .kick-area { display: flex; flex-direction: column; align-items: center; margin: 10px 0 18px; }
+  .kick-outer {
+    width: 160px; height: 160px; border-radius: 50%;
+    background: var(--pink-soft);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+    transition: transform .1s;
+  }
+  .kick-outer:active { transform: scale(0.93); }
+  .kick-btn-inner {
+    width: 138px; height: 138px; border-radius: 50%;
+    background: var(--bg);
+    border: 3px solid var(--pink-mid);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: none;
+    transition: border-color .15s, background .15s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .kick-btn-inner.flash { background: var(--pink-soft); border-color: var(--pink); }
+  .kick-num  { font-size: 50px; font-weight: 300; color: var(--pink); line-height: 1; }
+  .kick-word { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .kick-bm   { font-size: 10px; color: var(--text3); }
+  .kick-hint    { font-size: 13px; color: var(--text2); text-align: center; }
+  .kick-hint-bm { font-size: 11px; color: var(--text3); text-align: center; margin-top: 2px; }
+
+  /* ── Stats row ── */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat  { background: var(--bg2); border-radius: var(--radius-sm); padding: 12px; text-align: center; border: 1px solid var(--border); }
+  .stat-val { font-size: 20px; font-weight: 400; color: var(--dark); }
+  .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* ── Kick log ── */
+  .log-wrap { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .log-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; background: var(--bg2);
+    border-radius: var(--radius-sm); border: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .log-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pink); flex-shrink: 0; }
+  .log-idx  { color: var(--text3); min-width: 45px; }
+  .log-time { font-weight: 500; color: var(--dark); flex: 1; }
+  .log-int  { color: var(--text3); font-size: 11px; }
+
+  /* ── Action buttons ── */
+  .act-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .act-btn {
+    padding: 13px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border); background: var(--bg2); color: var(--text);
+    cursor: pointer; transition: opacity .15s; text-align: center;
+  }
+  .act-btn:active { opacity: .75; }
+  .act-primary { background: var(--pink);   color: #fff; border-color: var(--pink); }
+  .act-danger  { background: var(--red-light); color: var(--red); border-color: var(--red-mid); }
+  .act-teal    { background: var(--teal);   color: #fff; border-color: var(--teal); }
+
+  /* ── Red alert overlay (full screen when 8pm + <10 kicks) ── */
+  .alert-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: var(--red-light);
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px;
+    text-align: center;
+  }
+  .alert-overlay.on { display: flex; }
+  .alert-sos {
+    width: 100px; height: 100px; border-radius: 50%;
+    background: var(--red); display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px;
+    animation: sos-pulse 1s infinite;
+  }
+  @keyframes sos-pulse { 0%,100%{transform:scale(1); box-shadow:0 0 0 0 rgba(200,50,50,.4)} 50%{transform:scale(1.06); box-shadow:0 0 0 16px rgba(200,50,50,0)} }
+  .alert-sos-icon { font-size: 44px; color: #fff; }
+  .alert-title-main { font-size: 22px; font-weight: 600; color: var(--red); margin-bottom: 8px; line-height: 1.3; }
+  .alert-title-bm   { font-size: 16px; font-weight: 400; color: var(--red); margin-bottom: 20px; font-style: italic; }
+  .alert-body  { font-size: 14px; color: #8b1c1c; line-height: 1.7; margin-bottom: 6px; }
+  .alert-body-bm { font-size: 12px; color: #a02020; line-height: 1.7; margin-bottom: 28px; font-style: italic; }
+  .alert-kick-count { font-size: 52px; font-weight: 300; color: var(--red); line-height: 1; margin-bottom: 4px; }
+  .alert-kick-label { font-size: 13px; color: #a02020; margin-bottom: 28px; }
+  .btn-silence {
+    padding: 16px 36px; background: var(--red); color: #fff; border: none;
+    border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer;
+    width: 100%; margin-bottom: 10px;
+  }
+  .btn-dismiss {
+    padding: 12px 36px; background: transparent; color: var(--red); border: 1px solid var(--red-mid);
+    border-radius: var(--radius); font-size: 13px; cursor: pointer; width: 100%;
+  }
+
+  /* ── 4-hour reminder popup ── */
+  .reminder-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 90;
+    background: rgba(0,0,0,0.45);
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .reminder-overlay.on { display: flex; }
+  .reminder-card {
+    background: var(--bg); border-radius: 20px; padding: 28px 24px;
+    text-align: center; width: 100%; max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .reminder-icon { font-size: 40px; margin-bottom: 12px; }
+  .reminder-title { font-size: 18px; font-weight: 600; color: var(--dark); margin-bottom: 6px; }
+  .reminder-bm    { font-size: 14px; color: var(--text2); font-style: italic; margin-bottom: 12px; }
+  .reminder-body  { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 20px; }
+  .reminder-count { font-size: 40px; font-weight: 300; color: var(--pink); }
+  .reminder-count-lbl { font-size: 12px; color: var(--text3); margin-bottom: 20px; }
+  .btn-ok {
+    width: 100%; padding: 14px; background: var(--pink); color: #fff;
+    border: none; border-radius: var(--radius); font-size: 14px; font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* ── Nurse station ── */
+  .nurse-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .nurse-stat { background: var(--bg2); border-radius: var(--radius-sm); padding: 14px 10px; text-align: center; border: 1px solid var(--border); }
+  .ns-val { font-size: 24px; font-weight: 400; }
+  .ns-lbl { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .ns-alert { color: var(--red); }
+  .ns-ok    { color: var(--teal); }
+
+  .nurse-alarm-btn {
+    width: 100%; padding: 16px; background: var(--red); color: #fff;
+    border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-bottom: 16px;
+    animation: alarm-pulse 1.2s infinite;
+  }
+  @keyframes alarm-pulse { 0%,100%{opacity:1} 50%{opacity:.75} }
+
+  .pt-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 10px;
+  }
+  .pt-card.danger-card { background: var(--red-light); border-color: var(--red-mid); }
+  .pt-av {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; flex-shrink: 0;
+  }
+  .av-ok     { background: var(--teal-light); color: #065c40; }
+  .av-warn   { background: var(--amber-light); color: #6b3c06; }
+  .av-danger { background: var(--red-light);   color: #8b1c1c; }
+  .pt-info   { flex: 1; min-width: 0; }
+  .pt-name   { font-size: 13px; font-weight: 600; color: var(--dark); }
+  .pt-detail { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .pt-badge  {
+    font-size: 10px; font-weight: 500; padding: 4px 10px;
+    border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+  }
+  .b-ok     { background: var(--teal-light);   color: #065c40; }
+  .b-warn   { background: var(--amber-light);  color: #6b3c06; }
+  .b-danger { background: var(--red-light);    color: #8b1c1c; }
+
+  /* ── Setup ── */
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: .04em; }
+  .form-input {
+    width: 100%; padding: 11px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--bg2);
+    font-size: 14px; color: var(--text); font-family: inherit; outline: none;
+  }
+  .form-input:focus { border-color: var(--pink); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    padding: 6px 13px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); cursor: pointer; background: var(--bg2); color: var(--text2);
+    transition: all .15s;
+  }
+  .chip.sel { background: var(--pink); color: #fff; border-color: var(--pink); }
+
+  .info-box {
+    background: var(--bg2); border-radius: var(--radius); padding: 15px 16px;
+    margin-top: 16px; border: 1px solid var(--border);
+  }
+  .info-box-title { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .04em; }
+  .info-box-body  { font-size: 12px; color: var(--text2); line-height: 1.9; }
+
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+
+  /* ── Misc ── */
+  .empty-state { text-align: center; padding: 20px; font-size: 12px; color: var(--text3); }
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .clock-bar { text-align: right; font-size: 11px; color: var(--text3); margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<!-- ══ RED ALERT OVERLAY ══ -->
+<div class="alert-overlay" id="alertOverlay">
+  <div class="alert-sos">
+    <div class="alert-sos-icon">!</div>
+  </div>
+  <div class="alert-title-main">Please inform medical personnel immediately</div>
+  <div class="alert-title-bm">Sila maklumkan kakitangan perubatan dengan segera</div>
+  <div class="alert-kick-count" id="overlayCount">0</div>
+  <div class="alert-kick-label">kicks recorded / tendangan direkodkan</div>
+  <div class="alert-body">Baby's movement count is below the safe threshold.<br>Only <strong id="overlayCount2">0</strong> kicks recorded by 8:00pm.<br>Target is 10 kicks within 12 hours.</div>
+  <div class="alert-body-bm">Kiraan pergerakan bayi di bawah had selamat.<br>Hanya <strong id="overlayCount3">0</strong> tendangan dicatat menjelang jam 8.00 malam.</div>
+  <button class="btn-silence" onclick="silenceAlarm()">Silence alarm &amp; call nurse / Diam penggera &amp; panggil jururawat</button>
+  <button class="btn-dismiss" onclick="dismissOverlay()">Continue monitoring / Teruskan pemantauan</button>
+</div>
+
+<!-- ══ 4-HOUR REMINDER POPUP ══ -->
+<div class="reminder-overlay" id="reminderOverlay">
+  <div class="reminder-card">
+    <div class="reminder-icon">🕐</div>
+    <div class="reminder-title" id="reminderTitle">Check-in time</div>
+    <div class="reminder-bm" id="reminderBm">Masa semakan</div>
+    <div class="reminder-body" id="reminderBody">Please check your kick count now.</div>
+    <div class="reminder-count" id="reminderCount">0</div>
+    <div class="reminder-count-lbl">kicks so far / tendangan setakat ini</div>
+    <button class="btn-ok" onclick="dismissReminder()">OK — teruskan / continue</button>
+  </div>
+</div>
+
+<!-- ══ SHELL ══ -->
+<div class="shell">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">FKC Monitor</div>
+      <div class="topbar-sub">Fetal Kick Counter — Ward Edition</div>
+    </div>
+    <div class="topbar-badge" id="topbarBadge">9am–9pm</div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav">
+    <button class="nav-tab on"  onclick="gotoPane('mother')">Ibu / Mother</button>
+    <button class="nav-tab"     onclick="gotoPane('nurse')">Jururawat / Nurse</button>
+    <button class="nav-tab"     onclick="gotoPane('setup')">Setup</button>
+  </div>
+
+  <!-- ══ MOTHER PANE ══ -->
+  <div id="pane-mother" class="pane on">
+
+    <div class="clock-bar" id="clockBar">—</div>
+
+    <!-- Main status banner -->
+    <div class="banner banner-blue" id="mainBanner">
+      <div class="banner-title" id="bannerTitle">Selamat pagi — Sesi bermula</div>
+      <div class="banner-sub"   id="bannerSub">Good morning. Your fetal kick monitoring session has started (9am–9pm).</div>
+      <div class="banner-bm"    id="bannerBm">Sesi pemantauan tendangan janin bermula. Tekan butang setiap kali bayi bergerak.</div>
+    </div>
+
+    <!-- Session bar -->
+    <div class="session-bar">
+      <div>
+        <div class="session-name" id="sBarName">Pesakit</div>
+        <div class="session-detail" id="sBarDetail">GA — · Katil —</div>
+      </div>
+      <div class="session-time" id="sBarTime">09:00</div>
+    </div>
+
+    <!-- Checkpoint timeline -->
+    <div class="cp-wrap">
+      <div class="cp-header">
+        <span class="cp-header-label">Jadual semakan / Check-in schedule</span>
+        <span class="cp-next" id="cpNext">Seterusnya: 1pm</span>
+      </div>
+      <div class="cp-body">
+        <div class="timeline" id="timeline"></div>
+        <div class="prog-wrap">
+          <div class="prog-fill" id="progFill" style="width:0%; background:var(--pink);"></div>
+        </div>
+        <div class="prog-labels">
+          <span id="progLeft">0 / 10 tendangan</span>
+          <span>Sasaran: 10 menjelang 9pm</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kick button -->
+    <div class="kick-area">
+      <div class="kick-outer" id="kickOuter" ontouchstart="recordKick()" onclick="recordKick()">
+        <div class="kick-btn-inner" id="kickInner">
+          <div class="kick-num"  id="kickNum">0</div>
+          <div class="kick-word">kicks</div>
+          <div class="kick-bm">tendangan</div>
+        </div>
+      </div>
+      <div class="kick-hint">Tap each time baby kicks or moves</div>
+      <div class="kick-hint-bm">Tekan setiap kali bayi menendang atau bergerak</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-val" id="statTotal">0</div>
+        <div class="stat-lbl">Kicks / Tendangan</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="statInterval">—</div>
+        <div class="stat-lbl">Last interval</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="statLeft">10</div>
+        <div class="stat-lbl">Remaining</div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="section-label">Log tendangan / Kick log</div>
+    <div class="log-wrap" id="kickLog">
+      <div class="empty-state">Tiada tendangan lagi — No kicks recorded yet</div>
+    </div>
+
+    <!-- Actions -->
+    <div class="act-row">
+      <button class="act-btn act-danger"   onclick="undoKick()">Undo last kick</button>
+      <button class="act-btn act-primary"  onclick="showCallNurse()">Panggil jururawat / Call nurse</button>
+    </div>
+    <div style="margin-top:10px; text-align:center; font-size:11px; color:var(--text3);" id="syncMsg"></div>
+  </div>
+
+  <!-- ══ NURSE PANE ══ -->
+  <div id="pane-nurse" class="pane">
+
+    <button id="nurseAlarmBtn" style="display:none;" class="nurse-alarm-btn" onclick="silenceAlarm()">
+      ⚠ RED FLAG ALERT — Tap to acknowledge / Ketuk untuk akui
+    </button>
+
+    <div id="nurseBanner" class="banner banner-blue" style="display:none;">
+      <div class="banner-title" id="nurseBannerTitle"></div>
+      <div class="banner-sub"   id="nurseBannerSub"></div>
+    </div>
+
+    <div class="nurse-stat-grid">
+      <div class="nurse-stat">
+        <div class="ns-val ns-alert" id="nAlert">0</div>
+        <div class="ns-lbl">Red flags</div>
+      </div>
+      <div class="nurse-stat">
+        <div class="ns-val" id="nActive">1</div>
+        <div class="ns-lbl">Active</div>
+      </div>
+      <div class="nurse-stat">
+        <div class="ns-val ns-ok" id="nOk">0</div>
+        <div class="ns-lbl">Target met</div>
+      </div>
+    </div>
+
+    <div class="section-label">Senarai pesakit / Patient list</div>
+    <div id="ptList"></div>
+
+    <div class="divider"></div>
+    <div class="section-label">Tindakan klinikal / Clinical actions</div>
+    <div class="act-row">
+      <button class="act-btn" onclick="exportSummary()">Export summary</button>
+      <button class="act-btn act-teal" onclick="markReviewed()">Mark reviewed</button>
+    </div>
+    <div style="margin-top:10px; text-align:center; font-size:11px; color:var(--text3);" id="reviewMsg"></div>
+  </div>
+
+  <!-- ══ SETUP PANE ══ -->
+  <div id="pane-setup" class="pane">
+
+    <div class="form-group">
+      <label class="form-label">Nama ibu / Mother's name</label>
+      <input class="form-input" id="fName" value="Puan Siti Aminah bt Zakaria"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">MRN / IC</label>
+        <input class="form-input" id="fMRN" value="HTPN-24-00812"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">GA (minggu/weeks)</label>
+        <input class="form-input" id="fGA" type="number" value="34"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Gravida</label>
+        <input class="form-input" id="fG" type="number" value="3"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Para</label>
+        <input class="form-input" id="fP" type="number" value="2"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Katil / Bed</label>
+      <input class="form-input" id="fBed" value="Ward 4B — Katil 12"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Risiko / Risk category</label>
+      <div class="chip-row" id="riskChips">
+        <div class="chip sel" onclick="toggleChip(this)">Low risk</div>
+        <div class="chip" onclick="toggleChip(this)">GDM</div>
+        <div class="chip" onclick="toggleChip(this)">PIH/PE</div>
+        <div class="chip" onclick="toggleChip(this)">IUGR</div>
+        <div class="chip" onclick="toggleChip(this)">APH</div>
+        <div class="chip" onclick="toggleChip(this)">Previous IUD</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Google Sheets webhook URL (optional)</label>
+      <input class="form-input" id="fWebhook" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:12px;"/>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label" style="margin-bottom:8px;">Demo — Simulasi masa / Simulate time</div>
+    <div class="chip-row" id="timeChips">
+      <div class="chip sel" onclick="simTime(this,9,0)">9:00am</div>
+      <div class="chip" onclick="simTime(this,11,0)">11:00am</div>
+      <div class="chip" onclick="simTime(this,13,0)">1:00pm</div>
+      <div class="chip" onclick="simTime(this,17,0)">5:00pm</div>
+      <div class="chip" onclick="simTime(this,20,5)">8:05pm</div>
+      <div class="chip" onclick="simTime(this,21,0)">9:00pm</div>
+    </div>
+
+    <button class="act-btn act-primary" style="width:100%; margin-top:16px; padding:14px;" onclick="applySetup()">
+      Mula sesi / Start session
+    </button>
+
+    <div class="info-box">
+      <div class="info-box-title">Jadual peringatan automatik / Auto-reminder schedule</div>
+      <div class="info-box-body">
+        9:00am — Sesi bermula / Session begins<br>
+        1:00pm — Semakan 4 jam / 4-hour check-in<br>
+        5:00pm — Semakan 4 jam / 4-hour check-in<br>
+        8:00pm — Amaran awal jika &lt;10 tendangan / Early warning if &lt;10 kicks<br>
+        9:00pm — Sesi tamat / Session ends &amp; final tally
+      </div>
+    </div>
+
+    <div class="info-box" style="margin-top:10px;">
+      <div class="info-box-title">Cara deploy ke GitHub Pages</div>
+      <div class="info-box-body">
+        1. Upload fail HTML ini ke GitHub repository baru<br>
+        2. Settings → Pages → Deploy from main branch<br>
+        3. Kongsikan URL kepada ibu di wad<br>
+        4. Boleh tambah ke Home Screen (Add to Home Screen) untuk guna seperti app
+      </div>
+    </div>
+  </div>
+
+</div><!-- end shell -->
+
+<script>
+// ═══════════════════════════════════════
+// State
+// ═══════════════════════════════════════
+let kicks      = [];          // [{h, m, ts}]
+let simH       = 9;
+let simM       = 0;
+let alarmOn    = false;
+let audioCtx   = null;
+let alarmTimer = null;
+let reviewed   = false;
+let reminderShown = { 13: false, 17: false, 20: false, 21: false };
+
+const CHECKPOINTS = [
+  { h:9,  label:'9am',  short:'9' },
+  { h:13, label:'1pm',  short:'1' },
+  { h:17, label:'5pm',  short:'5' },
+  { h:20, label:'8pm',  short:'8' },
+  { h:21, label:'9pm',  short:'9p'},
+];
+
+const DEMO_PTS = [
+  { name:'Puan Rosnah bt Ismail',  initials:'RI', bed:'4B Katil 8',  ga:36, risk:'GDM',  kicks:3,  status:'danger' },
+  { name:'Mdm Lim Bee Eng',        initials:'LB', bed:'4B Katil 14', ga:33, risk:'PIH',  kicks:7,  status:'warn'   },
+  { name:'Puan Kavitha Rajan',     initials:'KR', bed:'4A Katil 3',  ga:30, risk:'Low',  kicks:10, status:'ok'     },
+];
+
+// ═══════════════════════════════════════
+// Navigation
+// ═══════════════════════════════════════
+function gotoPane(name) {
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('on'));
+  document.getElementById('pane-' + name).classList.add('on');
+  const idx = ['mother','nurse','setup'].indexOf(name);
+  document.querySelectorAll('.nav-tab')[idx].classList.add('on');
+  if (name === 'nurse') renderNurse();
+}
+
+// ═══════════════════════════════════════
+// Setup
+// ═══════════════════════════════════════
+function toggleChip(el) {
+  el.classList.toggle('sel');
+}
+
+function simTime(el, h, m) {
+  document.querySelectorAll('#timeChips .chip').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  simH = h; simM = m;
+  checkScheduledReminders();
+  updateAll();
+}
+
+function applySetup() {
+  kicks = [];
+  alarmOn = false;
+  reviewed = false;
+  reminderShown = { 13:false, 17:false, 20:false, 21:false };
+  stopAlarm();
+  updateAll();
+  gotoPane('mother');
+}
+
+function getRisk() {
+  const sel = [...document.querySelectorAll('#riskChips .chip.sel')].map(c => c.textContent).join(', ');
+  return sel || 'Low risk';
+}
+
+// ═══════════════════════════════════════
+// Core kick logic
+// ═══════════════════════════════════════
+function recordKick() {
+  if (simH < 9 || simH >= 21) return;
+  const ts = Date.now();
+  kicks.push({ h: simH, m: simM, ts });
+
+  // Flash button
+  const inner = document.getElementById('kickInner');
+  inner.classList.add('flash');
+  setTimeout(() => inner.classList.remove('flash'), 180);
+
+  if (kicks.length === 10) playSuccess();
+  updateAll();
+  autoSync();
+}
+
+function undoKick() {
+  if (kicks.length > 0) { kicks.pop(); updateAll(); }
+}
+
+// ═══════════════════════════════════════
+// Render all
+// ═══════════════════════════════════════
+function updateAll() {
+  renderClock();
+  renderBanner();
+  renderSessionBar();
+  renderTimeline();
+  renderProgress();
+  renderStats();
+  renderKickLog();
+  renderNurse();
+  checkAlertOverlay();
+}
+
+function renderClock() {
+  const h12 = simH > 12 ? simH - 12 : simH === 0 ? 12 : simH;
+  const ap  = simH >= 12 ? 'pm' : 'am';
+  const mStr = String(simM).padStart(2,'0');
+  const today = new Date().toLocaleDateString('ms-MY', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  document.getElementById('clockBar').textContent = 'Masa simulasi: ' + h12 + ':' + mStr + ap + ' — ' + today;
+  document.getElementById('sBarTime').textContent = (simH > 12 ? simH-12 : simH) + ':' + mStr + ap;
+  document.getElementById('topbarBadge').textContent = h12 + ':' + mStr + ap;
+}
+
+function renderSessionBar() {
+  document.getElementById('sBarName').textContent   = document.getElementById('fName').value || 'Pesakit';
+  document.getElementById('sBarDetail').textContent =
+    'GA ' + (document.getElementById('fGA').value||'—') + ' mgu · ' +
+    (document.getElementById('fBed').value||'—') + ' · ' + getRisk();
+}
+
+function renderBanner() {
+  const count  = kicks.length;
+  const banner = document.getElementById('mainBanner');
+  const title  = document.getElementById('bannerTitle');
+  const sub    = document.getElementById('bannerSub');
+  const bm     = document.getElementById('bannerBm');
+
+  if (simH < 9) {
+    setBanner('banner-blue','Sesi belum bermula','Session starts at 9:00am. Please rest.','Sesi bermula jam 9.00 pagi. Sila berehat.');
+    return;
+  }
+  if (simH >= 21) {
+    if (count >= 10) setBanner('banner-ok','Sesi tamat — Sasaran tercapai!','Session ended. Baby reached 10 kicks. Well done!','Sesi tamat. Bayi mencapai 10 tendangan. Tahniah!');
+    else             setBanner('banner-danger','Sesi tamat — Lapor kepada jururawat','Session ended with only '+count+' kicks. Please inform ward nurse immediately.','Sesi tamat dengan hanya '+count+' tendangan. Sila lapor kepada jururawat segera.');
+    return;
+  }
+  if (count >= 10) {
+    setBanner('banner-ok','Tahniah — Sasaran tercapai! / Target met!','Baby has reached 10 kicks. Fetal movement is reassuring. You may continue monitoring until 9pm.','Bayi anda telah mencapai 10 tendangan. Teruskan pemantauan hingga jam 9 malam.');
+    return;
+  }
+  if (simH >= 20 && count < 10) {
+    setBanner('banner-danger','⚠ AMARAN — Maklumkan jururawat segera / ALERT — Inform nurse now','RED FLAG: Only '+count+' kicks by 8pm. Please press CALL NURSE or show this screen to ward staff immediately. CTG may be required.','Hanya '+count+' tendangan menjelang 8 malam. Sila tekan butang "Panggil Jururawat" atau tunjukkan skrin ini kepada jururawat segera.');
+    return;
+  }
+  if (simH >= 17 && count < 6) {
+    setBanner('banner-warn','Pergerakan rendah — Pantau lebih rapi / Low activity','Only '+count+' kicks so far. Keep monitoring and inform nurse if kicks remain low. Try lying on your left side.','Hanya '+count+' tendangan. Cuba berbaring ke kiri dan terus pantau pergerakan bayi.');
+    return;
+  }
+  if (simH >= 13 && count < 3) {
+    setBanner('banner-warn','Pergerakan masih kurang / Movement still low',count+' kicks recorded. Keep tapping whenever baby moves. Lie on your left side if unsure.','Hanya '+count+' tendangan dicatat. Terus pantau dan tekan butang setiap kali bayi bergerak.');
+    return;
+  }
+  setBanner('banner-blue','Sesi aktif — Teruskan pemantauan / Session active','Session active. '+count+' kicks recorded so far. Keep tapping each time baby moves.','Sesi aktif. '+count+' tendangan dicatat. Tekan butang setiap kali bayi bergerak.');
+}
+
+function setBanner(cls, title, sub, bm) {
+  const el = document.getElementById('mainBanner');
+  el.className = 'banner ' + cls;
+  document.getElementById('bannerTitle').textContent = title;
+  document.getElementById('bannerSub').textContent   = sub;
+  document.getElementById('bannerBm').textContent    = bm;
+}
+
+function renderTimeline() {
+  const tl = document.getElementById('timeline');
+  let html = '';
+  CHECKPOINTS.forEach((cp, i) => {
+    const kicksBefore = kicks.filter(k => k.h < cp.h).length;
+    let dotCls, label;
+    if (simH > cp.h) {
+      if (cp.h === 20 && kicksBefore < 10) { dotCls = 'alert'; label = kicksBefore; }
+      else { dotCls = kicksBefore >= 10 ? 'done' : 'pending'; label = kicksBefore; }
+    } else if (simH === cp.h) {
+      dotCls = 'active'; label = kicks.length;
+    } else {
+      dotCls = 'pending'; label = '·';
+    }
+    if (i > 0) {
+      const lineCls = simH > CHECKPOINTS[i-1].h ? 'tl-line done' : 'tl-line';
+      html += '<div class="' + lineCls + '"></div>';
+    }
+    html += '<div class="tl-node"><div class="tl-dot ' + dotCls + '">' + label + '</div><div class="tl-label">' + cp.label + '</div></div>';
+  });
+  tl.innerHTML = html;
+
+  const next = CHECKPOINTS.find(cp => cp.h > simH);
+  document.getElementById('cpNext').textContent = next ? 'Seterusnya: ' + next.label : 'Sesi tamat';
+}
+
+function renderProgress() {
+  const n   = kicks.length;
+  const pct = Math.min(n / 10 * 100, 100);
+  const fill = document.getElementById('progFill');
+  fill.style.width      = pct + '%';
+  fill.style.background = n >= 10 ? 'var(--teal)' : n >= 7 ? 'var(--amber)' : 'var(--pink)';
+  document.getElementById('progLeft').textContent = n + ' / 10 tendangan';
+}
+
+function renderStats() {
+  const n = kicks.length;
+  document.getElementById('statTotal').textContent = n;
+  document.getElementById('statLeft').textContent  = Math.max(0, 10 - n);
+  if (n >= 2) {
+    const last = kicks[n-1]; const prev = kicks[n-2];
+    const diff = (last.h * 60 + last.m) - (prev.h * 60 + prev.m);
+    document.getElementById('statInterval').textContent = Math.abs(diff) + 'm';
+  } else {
+    document.getElementById('statInterval').textContent = '—';
+  }
+}
+
+function renderKickLog() {
+  const log = document.getElementById('kickLog');
+  if (!kicks.length) {
+    log.innerHTML = '<div class="empty-state">Tiada tendangan lagi — No kicks recorded yet</div>';
+    return;
+  }
+  log.innerHTML = [...kicks].reverse().map((k, ri) => {
+    const idx   = kicks.length - ri;
+    const h12   = k.h > 12 ? k.h - 12 : k.h === 0 ? 12 : k.h;
+    const ap    = k.h >= 12 ? 'pm' : 'am';
+    const mStr  = String(k.m).padStart(2,'0');
+    const realIdx = kicks.length - ri - 1;
+    const intv  = realIdx > 0
+      ? Math.abs((k.h*60+k.m) - (kicks[realIdx-1].h*60+kicks[realIdx-1].m)) + 'm'
+      : 'pertama';
+    return '<div class="log-item">' +
+      '<div class="log-dot"></div>' +
+      '<span class="log-idx">Tendangan #' + idx + '</span>' +
+      '<span class="log-time">' + h12 + ':' + mStr + ap + '</span>' +
+      '<span class="log-int">+' + intv + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// Alert overlay
+// ═══════════════════════════════════════
+function checkAlertOverlay() {
+  const shouldShow = simH >= 20 && kicks.length < 10 && !alarmOn && simH < 21;
+  // auto-trigger once when crossing 8pm
+  if (simH === 20 && simM <= 5 && kicks.length < 10) {
+    triggerAlarm();
+  }
+}
+
+function triggerAlarm() {
+  if (alarmOn) return;
+  alarmOn = true;
+  const n = kicks.length;
+  document.getElementById('overlayCount').textContent  = n;
+  document.getElementById('overlayCount2').textContent = n;
+  document.getElementById('overlayCount3').textContent = n;
+  document.getElementById('alertOverlay').classList.add('on');
+  document.getElementById('nurseAlarmBtn').style.display = 'block';
+  startAlarmSound();
+  renderNurse();
+}
+
+function silenceAlarm() {
+  alarmOn = false;
+  stopAlarm();
+  document.getElementById('alertOverlay').classList.remove('on');
+  document.getElementById('nurseAlarmBtn').style.display = 'none';
+  document.getElementById('syncMsg').textContent = 'Penggera dibisukan — jururawat dimaklumkan';
+  autoSync();
+  renderNurse();
+}
+
+function dismissOverlay() {
+  document.getElementById('alertOverlay').classList.remove('on');
+  stopAlarm();
+  alarmOn = false;
+}
+
+function showCallNurse() {
+  triggerAlarm();
+  setBanner('banner-danger','Jururawat dipanggil — Nurse called','Your nurse has been notified. Please stay calm.','Jururawat sedang dihubungi. Sila tunggu sebentar.');
+}
+
+// ═══════════════════════════════════════
+// Scheduled reminders
+// ═══════════════════════════════════════
+function checkScheduledReminders() {
+  const msgs = {
+    13: { title:'1:00pm — Check-in time', bm:'Masa semakan 1 petang', body:'You are at your 4-hour check-in. Please review your kick count and continue monitoring.\n\nAnda berada pada semakan 4 jam. Sila semak kiraan tendangan anda.' },
+    17: { title:'5:00pm — Check-in time', bm:'Masa semakan 5 petang', body:'4-hour check-in. Only 4 hours left in your session. If fewer than 7 kicks, please inform your nurse.\n\nTinggal 4 jam lagi. Jika kurang dari 7 tendangan, sila maklumkan jururawat.' },
+    20: { title:'8:00pm — Final warning', bm:'Amaran akhir jam 8 malam', body:'One hour left! If your baby has not reached 10 kicks, please inform your nurse immediately.\n\nTinggal 1 jam! Jika bayi belum mencapai 10 tendangan, sila maklumkan jururawat segera.' },
+    21: { title:'9:00pm — Session ended', bm:'Sesi tamat', body:'Your monitoring session has ended. Please hand this phone to your nurse to review the final count.\n\nSesi tamat. Sila serahkan telefon kepada jururawat untuk semakan akhir.' },
+  };
+  const cp = msgs[simH];
+  if (cp && !reminderShown[simH]) {
+    reminderShown[simH] = true;
+    document.getElementById('reminderTitle').textContent = cp.title;
+    document.getElementById('reminderBm').textContent    = cp.bm;
+    document.getElementById('reminderBody').textContent  = cp.body;
+    document.getElementById('reminderCount').textContent = kicks.length;
+    document.getElementById('reminderOverlay').classList.add('on');
+    playChime();
+  }
+}
+
+function dismissReminder() {
+  document.getElementById('reminderOverlay').classList.remove('on');
+}
+
+// ═══════════════════════════════════════
+// Nurse pane
+// ═══════════════════════════════════════
+function renderNurse() {
+  const count   = kicks.length;
+  const name    = document.getElementById('fName').value || 'Pesakit';
+  const bed     = document.getElementById('fBed').value  || '—';
+  const ga      = document.getElementById('fGA').value   || '—';
+  const risk    = getRisk();
+  const initials= name.split(' ').filter(w=>w.length>1).slice(0,2).map(w=>w[0]).join('').toUpperCase() || 'PT';
+
+  const curStatus = count >= 10 ? 'ok'
+    : (simH >= 20 && count < 10 ? 'danger'
+    : (simH >= 17 && count < 6  ? 'warn' : 'ok'));
+
+  const all = [
+    { name, initials, bed, ga: ga+' mgu', risk, kicks: count, status: curStatus },
+    ...DEMO_PTS,
+  ];
+
+  const nAlert = all.filter(p => p.status==='danger').length;
+  const nOk    = all.filter(p => p.status==='ok').length;
+  document.getElementById('nAlert').textContent  = nAlert;
+  document.getElementById('nActive').textContent = all.length;
+  document.getElementById('nOk').textContent     = nOk;
+
+  // nurse banner
+  const nb = document.getElementById('nurseBanner');
+  if (nAlert > 0 || alarmOn) {
+    nb.style.display = 'block';
+    nb.className = 'banner banner-danger';
+    const dangerPt = all.find(p=>p.status==='danger');
+    document.getElementById('nurseBannerTitle').textContent = 'Red flag: ' + (dangerPt ? dangerPt.name : '—');
+    document.getElementById('nurseBannerSub').textContent   = (dangerPt ? dangerPt.name : '—') + ' (' + (dangerPt ? dangerPt.bed : '—') + '): only ' + (dangerPt ? dangerPt.kicks : 0) + ' kicks by ' + simH + ':00. CTG/NST assessment indicated.';
+  } else {
+    nb.style.display = 'none';
+  }
+
+  const stLabel = { ok:'Target met', warn:'Monitor', danger:'Red flag' };
+  document.getElementById('ptList').innerHTML = all.map(p =>
+    '<div class="pt-card ' + (p.status==='danger'?'danger-card':'') + '">' +
+      '<div class="pt-av av-' + p.status + '">' + p.initials + '</div>' +
+      '<div class="pt-info">' +
+        '<div class="pt-name">' + p.name + '</div>' +
+        '<div class="pt-detail">' + p.bed + ' · GA ' + p.ga + ' · ' + p.risk + ' · ' + p.kicks + ' kicks</div>' +
+      '</div>' +
+      '<div class="pt-badge b-' + p.status + '">' + stLabel[p.status] + '</div>' +
+    '</div>'
+  ).join('');
+}
+
+function markReviewed() {
+  reviewed = true;
+  document.getElementById('reviewMsg').textContent = 'Reviewed at ' + new Date().toLocaleTimeString('ms-MY') + ' — documented in case notes';
+}
+
+function exportSummary() {
+  const name  = document.getElementById('fName').value   || 'Pesakit';
+  const mrn   = document.getElementById('fMRN').value    || '—';
+  const ga    = document.getElementById('fGA').value     || '—';
+  const bed   = document.getElementById('fBed').value    || '—';
+  const risk  = getRisk();
+  const count = kicks.length;
+  const times = kicks.map((k,i) => {
+    const h12 = k.h > 12 ? k.h-12 : k.h;
+    const ap  = k.h >= 12 ? 'pm' : 'am';
+    return (i+1)+'. '+h12+':'+String(k.m).padStart(2,'0')+ap;
+  }).join('  |  ');
+  const status = count >= 10 ? 'TARGET MET' : (simH >= 20 ? 'RED FLAG — CTG INDICATED' : 'MONITORING IN PROGRESS');
+  const txt =
+    'FKC MONITOR — RINGKASAN / SUMMARY\n' +
+    '====================================\n' +
+    'Nama     : ' + name + '\n' +
+    'MRN/IC   : ' + mrn + '\n' +
+    'GA       : ' + ga + ' minggu\n' +
+    'Katil    : ' + bed + '\n' +
+    'Risiko   : ' + risk + '\n' +
+    'Sesi     : 9:00am – 9:00pm\n' +
+    'Masa kini: ' + simH + ':' + String(simM).padStart(2,'0') + '\n' +
+    '------------------------------------\n' +
+    'Jumlah tendangan / Total kicks: ' + count + ' / 10\n' +
+    'Status   : ' + status + '\n' +
+    '------------------------------------\n' +
+    'Masa tendangan / Kick times:\n' + (times || 'Tiada / None') + '\n' +
+    '====================================\n' +
+    'Dijana oleh FKC Monitor — HTPN\n' +
+    new Date().toLocaleString('ms-MY');
+
+  const blob = new Blob([txt], { type:'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'FKC_' + mrn + '_' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════
+// Audio
+// ═══════════════════════════════════════
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function startAlarmSound() {
+  stopAlarm();
+  function beep() {
+    if (!alarmOn) return;
+    try {
+      const ctx  = getAudioCtx();
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+      osc.start(); osc.stop(ctx.currentTime + 0.45);
+    } catch(e){}
+    alarmTimer = setTimeout(beep, 1400);
+  }
+  beep();
+}
+
+function stopAlarm() {
+  if (alarmTimer) { clearTimeout(alarmTimer); alarmTimer = null; }
+}
+
+function playChime() {
+  try {
+    const ctx = getAudioCtx();
+    [523, 659, 784].forEach((f, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.16);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.16 + 0.35);
+      o.start(ctx.currentTime + i * 0.16);
+      o.stop(ctx.currentTime + i * 0.16 + 0.35);
+    });
+  } catch(e){}
+}
+
+function playSuccess() {
+  try {
+    const ctx = getAudioCtx();
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.12);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.4);
+      o.start(ctx.currentTime + i * 0.12);
+      o.stop(ctx.currentTime + i * 0.12 + 0.4);
+    });
+  } catch(e){}
+}
+
+// ═══════════════════════════════════════
+// Google Sheets sync
+// ═══════════════════════════════════════
+async function autoSync() {
+  const webhook = document.getElementById('fWebhook').value.trim();
+  if (!webhook) return;
+  const payload = {
+    name:      document.getElementById('fName').value,
+    mrn:       document.getElementById('fMRN').value,
+    ga:        document.getElementById('fGA').value,
+    bed:       document.getElementById('fBed').value,
+    risk:      getRisk(),
+    kicks:     kicks.length,
+    kickTimes: kicks.map(k => k.h + ':' + String(k.m).padStart(2,'0')),
+    alertTime: simH + ':' + String(simM).padStart(2,'0'),
+    alertStatus: kicks.length >= 10 ? 'TARGET_MET' : (simH >= 20 ? 'RED_FLAG' : 'MONITORING'),
+    timestamp: new Date().toISOString(),
+  };
+  try {
+    await fetch(webhook, { method:'POST', body: JSON.stringify(payload), mode:'no-cors' });
+    document.getElementById('syncMsg').textContent = 'Synced to Sheets — ' + new Date().toLocaleTimeString('ms-MY');
+  } catch(e) {
+    document.getElementById('syncMsg').textContent = 'Sync gagal — semak webhook URL';
+  }
+}
+
+// ═══════════════════════════════════════
+// Init
+// ═══════════════════════════════════════
+updateAll();
+</script>
+</body>
+</html>
